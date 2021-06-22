@@ -12,61 +12,59 @@ class FlutterAudioRecorder {
   static const String DEFAULT_EXTENSION = '.m4a';
   static LocalFileSystem fs = LocalFileSystem();
 
-  String _path;
-  String _extension;
-  Recording _recording;
-  int _sampleRate;
+  String? _path;
+  String? _extension;
+  Recording? _recording;
+  int? _sampleRate;
 
-  Future _initRecorder;
-  Future get initialized => _initRecorder;
-  Recording get recording => _recording;
+  Future? _initRecorder;
+  Future? get initialized => _initRecorder;
+  Recording? get recording => _recording;
 
   FlutterAudioRecorder(String path,
-      {AudioFormat audioFormat, int sampleRate = 16000}) {
+      {AudioFormat? audioFormat, int sampleRate = 16000}) {
     _initRecorder = _init(path, audioFormat, sampleRate);
   }
 
   /// Initialized recorder instance
-  Future _init(String path, AudioFormat audioFormat, int sampleRate) async {
+  Future _init(String path, AudioFormat? audioFormat, int sampleRate) async {
     String extension;
     String extensionInPath;
-    if (path != null) {
-      // Extension(.xyz) of Path
-      extensionInPath = p.extension(path);
-      // Use AudioFormat
-      if (audioFormat != null) {
-        // .m4a != .m4a
-        if (_stringToAudioFormat(extensionInPath) != audioFormat) {
-          // use AudioOutputFormat
-          extension = _audioFormatToString(audioFormat);
-          path = p.withoutExtension(path) + extension;
-        } else {
-          extension = p.extension(path);
-        }
+
+    // Extension(.xyz) of Path
+    extensionInPath = p.extension(path);
+    // Use AudioFormat
+    if (audioFormat != null) {
+      // .m4a != .m4a
+      if (_stringToAudioFormat(extensionInPath) != audioFormat) {
+        // use AudioOutputFormat
+        extension = _audioFormatToString(audioFormat);
+        path = p.withoutExtension(path) + extension;
       } else {
-        // Else, Use Extension that inferred from Path
-        // if extension in path is valid
-        if (_isValidAudioFormat(extensionInPath)) {
-          extension = extensionInPath;
-        } else {
-          extension = DEFAULT_EXTENSION; // default value
-          path += extension;
-        }
-      }
-      File file = fs.file(path);
-      if (await file.exists()) {
-        throw new Exception("A file already exists at the path :" + path);
-      } else if (!await file.parent.exists()) {
-        throw new Exception("The specified parent directory does not exist");
+        extension = p.extension(path);
       }
     } else {
-      extension = DEFAULT_EXTENSION; // default value
+      // Else, Use Extension that inferred from Path
+      // if extension in path is valid
+      if (_isValidAudioFormat(extensionInPath)) {
+        extension = extensionInPath;
+      } else {
+        extension = DEFAULT_EXTENSION; // default value
+        path += extension;
+      }
     }
+    File file = fs.file(path);
+    if (await file.exists()) {
+      throw new Exception("A file already exists at the path :" + path);
+    } else if (!await file.parent.exists()) {
+      throw new Exception("The specified parent directory does not exist");
+    }
+
     _path = path;
     _extension = extension;
     _sampleRate = sampleRate;
 
-    Map<String, Object> response;
+    late Map<String, Object> response;
     var result = await _channel.invokeMethod('init',
         {"path": _path, "extension": _extension, "sampleRate": _sampleRate});
 
@@ -75,7 +73,7 @@ class FlutterAudioRecorder {
     }
 
     _recording = new Recording()
-      ..status = _stringToRecordingStatus(response['status'])
+      ..status = _stringToRecordingStatus(response['status'] as String?)
       ..metering = new AudioMetering(
           averagePower: -120, peakPower: -120, isMeteringEnabled: true);
 
@@ -103,7 +101,7 @@ class FlutterAudioRecorder {
   /// Request the recording to stop
   /// Once its stopped, the recording file will be finalized
   /// and will not be start, resume, pause anymore.
-  Future<Recording> stop() async {
+  Future<Recording?> stop() async {
     Map<String, Object> response;
     var result = await _channel.invokeMethod('stop');
 
@@ -118,7 +116,7 @@ class FlutterAudioRecorder {
   /// Ask for current status of recording
   /// Returns the result of current recording status
   /// Metering level, Duration, Status...
-  Future<Recording> current({int channel = 0}) async {
+  Future<Recording?> current({int channel = 0}) async {
     Map<String, Object> response;
 
     var result = await _channel.invokeMethod('current', {"channel": channel});
@@ -134,24 +132,25 @@ class FlutterAudioRecorder {
   /// Returns the result of record permission
   /// if not determined(app first launch),
   /// this will ask user to whether grant the permission
-  static Future<bool> get hasPermissions async {
-    bool hasPermission = await _channel.invokeMethod('hasPermissions');
+  static Future<bool?> get hasPermissions async {
+    bool? hasPermission = await _channel.invokeMethod('hasPermissions');
     return hasPermission;
   }
 
   ///  util - response msg to recording object.
   void _responseToRecording(Map<String, Object> response) {
-    if (response == null) return;
-
-    _recording.duration = new Duration(milliseconds: response['duration']);
-    _recording.path = response['path'];
-    _recording.audioFormat = _stringToAudioFormat(response['audioFormat']);
-    _recording.extension = response['audioFormat'];
-    _recording.metering = new AudioMetering(
-        peakPower: response['peakPower'],
-        averagePower: response['averagePower'],
-        isMeteringEnabled: response['isMeteringEnabled']);
-    _recording.status = _stringToRecordingStatus(response['status']);
+    _recording!.duration =
+        new Duration(milliseconds: response['duration'] as int);
+    _recording!.path = response['path'] as String?;
+    _recording!.audioFormat =
+        _stringToAudioFormat(response['audioFormat'] as String?);
+    _recording!.extension = response['audioFormat'] as String?;
+    _recording!.metering = new AudioMetering(
+        peakPower: response['peakPower'] as double?,
+        averagePower: response['averagePower'] as double?,
+        isMeteringEnabled: response['isMeteringEnabled'] as bool?);
+    _recording!.status =
+        _stringToRecordingStatus(response['status'] as String?);
   }
 
   /// util - verify if extension string is supported
@@ -168,7 +167,7 @@ class FlutterAudioRecorder {
   }
 
   /// util - Convert String to Enum
-  static AudioFormat _stringToAudioFormat(String extension) {
+  static AudioFormat? _stringToAudioFormat(String? extension) {
     switch (extension) {
       case ".wav":
         return AudioFormat.WAV;
@@ -194,7 +193,7 @@ class FlutterAudioRecorder {
   }
 
   /// util - Convert String to Enum
-  static RecordingStatus _stringToRecordingStatus(String status) {
+  static RecordingStatus _stringToRecordingStatus(String? status) {
     switch (status) {
       case "unset":
         return RecordingStatus.Unset;
@@ -215,34 +214,34 @@ class FlutterAudioRecorder {
 /// Recording Object - represent a recording file
 class Recording {
   /// File path
-  String path;
+  String? path;
 
   /// Extension
-  String extension;
+  String? extension;
 
   /// Duration in milliseconds
-  Duration duration;
+  Duration? duration;
 
   /// Audio format
-  AudioFormat audioFormat;
+  AudioFormat? audioFormat;
 
   /// Metering
-  AudioMetering metering;
+  AudioMetering? metering;
 
   /// Is currently recording
-  RecordingStatus status;
+  RecordingStatus? status;
 }
 
 /// Audio Metering Level - describe the metering level of microphone when recording
 class AudioMetering {
   /// Represent peak level of given short duration
-  double peakPower;
+  double? peakPower;
 
   /// Represent average level of given short duration
-  double averagePower;
+  double? averagePower;
 
   /// Is metering enabled in system
-  bool isMeteringEnabled;
+  bool? isMeteringEnabled;
 
   AudioMetering({this.peakPower, this.averagePower, this.isMeteringEnabled});
 }
