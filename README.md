@@ -1,8 +1,5 @@
 # flutter_audio_recorder
-<h4>
-  This is the modified version of <a href="https://pub.dev/packages/flutter_audio_recorder">flutter_audio_recorder</a>  
-<h4>
-
+### This is the modified version of <a href="https://pub.dev/packages/flutter_audio_recorder">flutter_audio_recorder</a>  
 ### Flutter Audio Record Plugin that supports `Record` `Pause` `Resume` `Stop` and provide access to audio level metering properties `average power` `peak power`
 #### Works for both `Android` and `iOS`
 
