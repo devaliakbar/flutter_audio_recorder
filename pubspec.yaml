@@ -13,7 +13,7 @@ dependencies:
   path: ^1.8.0
   flutter:
     sdk: flutter
-  file: ^6.1.2
+  file: ^6.1.0
 
 dev_dependencies:
   flutter_test:
